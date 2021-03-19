@@ -8,7 +8,12 @@ using Eigen::VectorXd;
  *   VectorXd or MatrixXd objects with zeros upon creation.
  */
 
-KalmanFilter::KalmanFilter() {}
+KalmanFilter::KalmanFilter() :
+    P_(MatrixXd::Identity(4,4)),
+    F_(MatrixXd::Identity(4,4)),
+    Q_(MatrixXd::Zero(4,4)),
+    I_(MatrixXd::Identity(4,4)) {
+}
 
 KalmanFilter::~KalmanFilter() {}
 
@@ -24,18 +29,40 @@ void KalmanFilter::Init(VectorXd &x_in, MatrixXd &P_in, MatrixXd &F_in,
 
 void KalmanFilter::Predict() {
   /**
-   * TODO: predict the state
+   * predict the state
    */
+  x_ = F_*x_;
+  P_ = F_*P_*F_.transpose() + Q_;
 }
 
 void KalmanFilter::Update(const VectorXd &z) {
   /**
    * TODO: update the state by using Kalman Filter equations
    */
+  // KF Measurement update step
+  VectorXd y = z - H_ * x_;
+  MatrixXd PHT = P_ * H_.transpose();
+  MatrixXd S = H_ * PHT + R_;
+  MatrixXd K = PHT * S.inverse();
+  // new state
+  x_ = x_ + K * y;
+  P_ = (I_ - K*H_)*P_.transpose();
 }
 
 void KalmanFilter::UpdateEKF(const VectorXd &z) {
   /**
    * TODO: update the state by using Extended Kalman Filter equations
    */
+  // KF Measurement update step
+  VectorXd hx(3);
+  hx(0) = sqrtf(x_[0]*x_[0]+x_[1]*x_[1]);
+  hx(1) = atan2(x_[1], x_[0]);
+  hx(2) = (x_[0]*x_[2] + x_[1]*x_[3]) / hx(0);
+  VectorXd y = z - hx;
+  MatrixXd PHT = P_ * H_.transpose();
+  MatrixXd S = H_ * PHT + R_;
+  MatrixXd K = PHT * S.inverse();
+  // new state
+  x_ = x_ + K * y;
+  P_ = (I_ - K*H_)*P_.transpose();
 }
